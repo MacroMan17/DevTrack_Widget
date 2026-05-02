@@ -33,7 +33,8 @@
           ]
         }
       ],
-      "icon": "src/assets/icon.ico"
+      "icon": "src/assets/icon.ico",
+      "sign": null
     },
     "nsis": {
       "oneClick": false,
@@ -54,6 +55,7 @@
     "electron-builder": "^24.9.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "terser": "^5.46.2",
     "vite": "^5.0.0",
     "wait-on": "^7.2.0"
   }
