@@ -15,3 +15,6 @@ build/
 *~
 .cache/
 .parcel-cache/
+dist-electron/
+release/
+

@@ -1,15 +1,22 @@
-// vite.config.js
+// vite.config.js — Production optimized
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: './', // Important for Electron file:// loading
+  base: './',
   server: {
     port: 5173,
   },
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    minify: 'terser',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
   },
 });

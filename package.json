@@ -3,31 +3,45 @@
   "version": "1.0.0",
   "description": "A floating desktop widget to track GitHub and LeetCode progress",
   "main": "main.js",
+  "homepage": "./",
   "scripts": {
     "start": "electron .",
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "build:react": "vite build",
-    "build:exe": "npm run build:react && electron-builder --win",
+    "build": "vite build",
+    "build:prod": "npm run build && electron-builder --win --publish never",
+    "build:exe": "npm run build && electron-builder --win",
     "preview": "vite preview"
   },
   "build": {
     "appId": "com.devtrack.widget",
     "productName": "DevTrack Widget",
-    "win": {
-      "target": "nsis",
-      "icon": "src/assets/icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+    "directories": {
+      "buildResources": "src/assets"
     },
     "files": [
       "dist/**/*",
       "main.js",
       "preload.js",
-      "tray.js",
       "package.json"
-    ]
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "src/assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "DevTrack Widget"
+    }
   },
   "dependencies": {
     "axios": "^1.6.0",

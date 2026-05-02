@@ -49,123 +49,17 @@ export async function fetchGitHubData(username) {
 }
 
 // ── LeetCode API ──────────────────────────────────────────────────────────────
-// LeetCode doesn't have an official public API, but their GraphQL endpoint
-// is accessible for public profile data.
-
-const LEETCODE_GRAPHQL = 'https://leetcode.com/graphql';
-
-const LEETCODE_QUERY = `
-  query getUserProfile($username: String!) {
-    matchedUser(username: $username) {
-      username
-      profile {
-        realName
-        ranking
-        userAvatar
-        starRating
-      }
-      submitStats: submitStatsGlobal {
-        acSubmissionNum {
-          difficulty
-          count
-          submissions
-        }
-      }
-      userCalendar {
-        streak
-        totalActiveDays
-        submissionCalendar
-      }
-    }
-  }
-`;
+// Using a public LeetCode API wrapper that handles CORS and authentication
 
 export async function fetchLeetCodeData(username) {
   if (!username) throw new Error('No username provided');
 
   try {
-    console.log(`[LeetCode] Attempting to fetch data for: ${username}`);
-    const res = await fetch(LEETCODE_GRAPHQL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Referer': 'https://leetcode.com',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
-      body: JSON.stringify({
-        query: LEETCODE_QUERY,
-        variables: { username },
-      }),
-    });
-
-    if (!res.ok) {
-      throw new Error(`LeetCode API error: ${res.status}`);
-    }
-
-    const json = await res.json();
+    console.log(`[LeetCode] Fetching data for: ${username}`);
     
-    // Check for GraphQL errors
-    if (json.errors) {
-      throw new Error(`LeetCode API error: ${json.errors[0]?.message || 'Unknown error'}`);
-    }
-
-    const user = json?.data?.matchedUser;
-
-    if (!user) {
-      throw new Error(`LeetCode user "${username}" not found`);
-    }
-
-    // Parse submission stats
-    const stats = user.submitStats?.acSubmissionNum || [];
-    const getCount = (difficulty) =>
-      stats.find((s) => s.difficulty === difficulty)?.count || 0;
-
-    const easy   = getCount('Easy');
-    const medium = getCount('Medium');
-    const hard   = getCount('Hard');
-    const total  = getCount('All');
-
-    // Parse streak from calendar
-    const streak = user.userCalendar?.streak || 0;
-    const totalActiveDays = user.userCalendar?.totalActiveDays || 0;
-
-    // Check if solved today
-    const calendar = JSON.parse(user.userCalendar?.submissionCalendar || '{}');
-    const todayTimestamp = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000);
-    const solvedToday = !!calendar[todayTimestamp];
-
-    return {
-      username: user.username,
-      name: user.profile?.realName || user.username,
-      avatarUrl: user.profile?.userAvatar,
-      ranking: user.profile?.ranking,
-      total,
-      easy,
-      medium,
-      hard,
-      streak,
-      totalActiveDays,
-      solvedToday,
-      profileUrl: `https://leetcode.com/${username}`,
-    };
-  } catch (error) {
-    console.error(`[LeetCode] GraphQL fetch failed:`, error.message);
-    // If CORS or network error, try alternative endpoint
-    if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
-      console.log(`[LeetCode] Trying alternative API...`);
-      return fetchLeetCodeDataAlternative(username);
-    }
-    throw error;
-  }
-}
-
-// Alternative: Use LeetCode's public REST API endpoint
-async function fetchLeetCodeDataAlternative(username) {
-  if (!username) throw new Error('No username provided');
-
-  try {
-    console.log(`[LeetCode] Fetching from alternative API: ${username}`);
+    // Try the most reliable public API first
     const res = await fetch(`https://leetcode-api.vercel.app/${username}`, {
+      method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       },
@@ -175,29 +69,83 @@ async function fetchLeetCodeDataAlternative(username) {
       if (res.status === 404) {
         throw new Error(`LeetCode user "${username}" not found`);
       }
-      throw new Error(`LeetCode API error: ${res.status}`);
+      throw new Error(`API error: ${res.status}`);
+    }
+
+    const data = await res.json();
+    console.log(`[LeetCode] Success:`, data);
+
+    // Handle case where user exists but has no stats
+    if (!data || data.status === 'error') {
+      throw new Error(data.message || 'User not found');
+    }
+
+    return {
+      username: data.username || username,
+      name: data.name || data.username || username,
+      avatarUrl: data.avatar,
+      ranking: data.ranking,
+      total: data.totalSolved || 0,
+      easy: data.easySolved || 0,
+      medium: data.mediumSolved || 0,
+      hard: data.hardSolved || 0,
+      streak: data.streak || 0,
+      totalActiveDays: data.totalActiveDays || 0,
+      solvedToday: false,
+      profileUrl: `https://leetcode.com/${username}`,
+    };
+  } catch (error) {
+    console.error(`[LeetCode] Fetch failed:`, error.message);
+    
+    // Try alternative API
+    try {
+      console.log(`[LeetCode] Trying alternative API...`);
+      return await fetchLeetCodeDataAlternative(username);
+    } catch (altError) {
+      console.error(`[LeetCode] Alternative API also failed:`, altError.message);
+      throw new Error(`Unable to fetch LeetCode profile: ${error.message}`);
+    }
+  }
+}
+
+// Alternative API using different endpoint
+async function fetchLeetCodeDataAlternative(username) {
+  if (!username) throw new Error('No username provided');
+
+  try {
+    console.log(`[LeetCode] Trying alternative endpoint for: ${username}`);
+    
+    const res = await fetch(`https://alfa-leetcode-api.onrender.com/userProfile/${username}`, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`Alternative API error: ${res.status}`);
     }
 
     const data = await res.json();
     console.log(`[LeetCode] Alternative API success:`, data);
 
     return {
-      username: data.username,
-      name: data.name || data.username,
+      username: data.username || username,
+      name: data.name || data.username || username,
       avatarUrl: data.avatar,
       ranking: data.ranking,
-      total: data.totalSolved,
-      easy: data.easySolved,
-      medium: data.mediumSolved,
-      hard: data.hardSolved,
+      total: data.totalSolved || 0,
+      easy: data.easySolved || 0,
+      medium: data.mediumSolved || 0,
+      hard: data.hardSolved || 0,
       streak: data.streak || 0,
       totalActiveDays: data.totalActiveDays || 0,
-      solvedToday: false, // This API doesn't provide this info
+      solvedToday: false,
       profileUrl: `https://leetcode.com/${username}`,
     };
   } catch (error) {
     console.error(`[LeetCode] Alternative API failed:`, error.message);
-    throw new Error(`Unable to fetch LeetCode profile: ${error.message}`);
+    throw error;
   }
 }
 

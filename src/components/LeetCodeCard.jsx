@@ -165,7 +165,7 @@ export default function LeetCodeCard({ data, loading, compact }) {
 
         .lc-total-number {
           font-family: var(--font-display);
-          font-size: 32px;
+          font-size: 24px;
           font-weight: 800;
           color: var(--accent-orange);
           line-height: 1;
