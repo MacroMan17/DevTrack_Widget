@@ -1,0 +1,89 @@
+================================================================================
+                    BUILD YOUR PRODUCTION APP NOW
+================================================================================
+
+Copy and paste these commands in PowerShell:
+
+================================================================================
+                          STEP 1: BUILD
+================================================================================
+
+npm run build
+
+This creates optimized React files in dist/ folder.
+
+Expected output:
+  ✓ Vite build complete
+  ✓ dist/ folder created (~2-3 MB)
+
+================================================================================
+                          STEP 2: CREATE INSTALLER
+================================================================================
+
+npm run build:exe
+
+This creates the Windows installer.
+
+Expected output:
+  ✓ Electron builder packaging
+  ✓ dist/DevTrack Widget Setup 1.0.0.exe created (~150 MB)
+
+================================================================================
+                          STEP 3: TEST INSTALLER
+================================================================================
+
+Double-click: dist/DevTrack Widget Setup 1.0.0.exe
+
+Expected behavior:
+  ✓ Installer wizard opens
+  ✓ Choose installation folder
+  ✓ App installs to Program Files
+  ✓ Desktop shortcut created
+  ✓ App launches automatically
+
+================================================================================
+                          THAT'S IT!
+================================================================================
+
+Your production widget is ready to distribute.
+
+Share the .exe file with others:
+  - No additional setup needed
+  - Works on Windows 10/11 (64-bit)
+  - ~150 MB total size
+  - Instant startup
+
+================================================================================
+                          TROUBLESHOOTING
+================================================================================
+
+If build fails:
+  rm -r node_modules dist
+  npm install
+  npm run build:exe
+
+If installer won't run:
+  - Run as Administrator
+  - Check Windows Defender isn't blocking it
+  - Try disabling antivirus temporarily
+
+If app won't start:
+  - Reinstall the app
+  - Check Event Viewer for errors
+  - Try running as Administrator
+
+================================================================================
+                          DOCUMENTATION
+================================================================================
+
+For more details, read:
+  - QUICK_START.md         → 3-step guide
+  - PRODUCTION_BUILD.md    → Detailed instructions
+  - PRODUCTION_CHECKLIST.md → Pre-release verification
+  - PRODUCTION_READY.md    → Complete overview
+
+================================================================================
+
+Ready? Run: npm run build:exe
+
+================================================================================
