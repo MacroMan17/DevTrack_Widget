@@ -37,14 +37,11 @@ export async function fetchGitHubData(username) {
 
   return {
     username: user.login,
-    name: user.name || user.login,
     avatarUrl: user.avatar_url,
     publicRepos: user.public_repos,
     followers: user.followers,
-    following: user.following,
-    recentCommits,     // commits in last 30 days
+    recentCommits,
     commitedToday,
-    profileUrl: user.html_url,
   };
 }
 
@@ -122,7 +119,6 @@ export async function fetchLeetCodeData(username) {
 
     return {
       username: data.username || username,
-      name: data.name || data.username || username,
       avatarUrl: data.avatar,
       ranking: data.ranking,
       total: data.totalSolved || 0,
@@ -130,7 +126,6 @@ export async function fetchLeetCodeData(username) {
       medium: data.mediumSolved || 0,
       hard: data.hardSolved || 0,
       streak: data.streak || calcStreak(data.submissionCalendar),
-      totalActiveDays: data.totalActiveDays || 0,
       solvedToday: false,
       profileUrl: `https://leetcode.com/${username}`,
     };
@@ -171,7 +166,6 @@ async function fetchLeetCodeDataAlternative(username) {
 
     return {
       username: data.username || username,
-      name: data.name || data.username || username,
       avatarUrl: data.avatar,
       ranking: data.ranking,
       total: data.totalSolved || 0,
@@ -179,7 +173,6 @@ async function fetchLeetCodeDataAlternative(username) {
       medium: data.mediumSolved || 0,
       hard: data.hardSolved || 0,
       streak: data.streak || calcStreak(data.submissionCalendar),
-      totalActiveDays: data.totalActiveDays || 0,
       solvedToday: false,
       profileUrl: `https://leetcode.com/${username}`,
     };

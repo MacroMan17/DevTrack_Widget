@@ -37,7 +37,6 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      enableRemoteModule: false,
       sandbox: true,
     },
   });
@@ -173,9 +172,7 @@ app.on('activate', () => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    // Don't quit on Windows/Linux — stay in tray
-  }
+  // Stay in tray on Windows/Linux — do not quit
 });
 
 app.on('before-quit', () => {
