@@ -34,7 +34,8 @@
         }
       ],
       "icon": "src/assets/icon.ico",
-      "sign": null
+      "sign": null,
+      "signingHashAlgorithms": []
     },
     "nsis": {
       "oneClick": false,
