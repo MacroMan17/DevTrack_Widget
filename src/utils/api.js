@@ -51,6 +51,46 @@ export async function fetchGitHubData(username) {
 // ── LeetCode API ──────────────────────────────────────────────────────────────
 // Using a public LeetCode API wrapper that handles CORS and authentication
 
+// Calculate streak from submissionCalendar JSON string
+// submissionCalendar = '{ "unix_timestamp": count, ... }'
+function calcStreak(submissionCalendar) {
+  if (!submissionCalendar) return 0;
+  try {
+    const calendar = typeof submissionCalendar === 'string'
+      ? JSON.parse(submissionCalendar)
+      : submissionCalendar;
+
+    // Build a Set of date strings 'YYYY-MM-DD' that have at least 1 submission
+    const activeDates = new Set(
+      Object.entries(calendar)
+        .filter(([, count]) => count > 0)
+        .map(([ts]) => new Date(parseInt(ts) * 1000).toISOString().split('T')[0])
+    );
+
+    // Walk backwards from today counting consecutive active days
+    let streak = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+
+      if (activeDates.has(key)) {
+        streak++;
+      } else {
+        // Allow missing today (streak may still be alive from yesterday)
+        if (i === 0) continue;
+        break;
+      }
+    }
+    return streak;
+  } catch {
+    return 0;
+  }
+}
+
 export async function fetchLeetCodeData(username) {
   if (!username) throw new Error('No username provided');
 
@@ -89,7 +129,7 @@ export async function fetchLeetCodeData(username) {
       easy: data.easySolved || 0,
       medium: data.mediumSolved || 0,
       hard: data.hardSolved || 0,
-      streak: data.streak || 0,
+      streak: data.streak || calcStreak(data.submissionCalendar),
       totalActiveDays: data.totalActiveDays || 0,
       solvedToday: false,
       profileUrl: `https://leetcode.com/${username}`,
@@ -138,7 +178,7 @@ async function fetchLeetCodeDataAlternative(username) {
       easy: data.easySolved || 0,
       medium: data.mediumSolved || 0,
       hard: data.hardSolved || 0,
-      streak: data.streak || 0,
+      streak: data.streak || calcStreak(data.submissionCalendar),
       totalActiveDays: data.totalActiveDays || 0,
       solvedToday: false,
       profileUrl: `https://leetcode.com/${username}`,
