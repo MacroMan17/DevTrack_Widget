@@ -140,12 +140,19 @@ ipcMain.handle('get-settings', () => ({
   refreshInterval: store.get('refreshInterval', 5),
   compactMode: store.get('compactMode', false),
   notifications: store.get('notifications', true),
+  launchOnStartup: app.getLoginItemSettings().openAtLogin,
 }));
 
 ipcMain.handle('save-settings', (event, settings) => {
   Object.entries(settings).forEach(([key, val]) => store.set(key, val));
   if (mainWindow && settings.alwaysOnTop !== undefined) {
     mainWindow.setAlwaysOnTop(settings.alwaysOnTop);
+  }
+  if (settings.launchOnStartup !== undefined) {
+    app.setLoginItemSettings({
+      openAtLogin: settings.launchOnStartup,
+      path: process.execPath,
+    });
   }
   return true;
 });

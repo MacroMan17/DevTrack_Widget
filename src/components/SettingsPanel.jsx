@@ -7,12 +7,13 @@ export default function SettingsPanel({ usernames, settings, onSave, onClose }) 
   const [leetcode, setLeetcode] = useState(usernames.leetcode || '');
   const [interval, setInterval] = useState(settings.refreshInterval || 5);
   const [notifs,   setNotifs]   = useState(settings.notifications !== false);
+  const [startup,  setStartup]  = useState(settings.launchOnStartup || false);
   const [saved,    setSaved]    = useState(false);
 
   const handleSave = () => {
     onSave({
       usernames: { github: github.trim(), leetcode: leetcode.trim() },
-      settings:  { refreshInterval: interval, notifications: notifs },
+      settings:  { refreshInterval: interval, notifications: notifs, launchOnStartup: startup },
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
@@ -82,6 +83,20 @@ export default function SettingsPanel({ usernames, settings, onSave, onClose }) 
           <button
             className={`toggle ${notifs ? 'toggle--on' : ''}`}
             onClick={() => setNotifs(!notifs)}
+          >
+            <span className="toggle-knob" />
+          </button>
+        </div>
+
+        {/* Launch on startup toggle */}
+        <div className="toggle-row">
+          <div>
+            <span className="toggle-label">Launch on startup</span>
+            <span className="toggle-sublabel">Open automatically when Windows starts</span>
+          </div>
+          <button
+            className={`toggle ${startup ? 'toggle--on' : ''}`}
+            onClick={() => setStartup(!startup)}
           >
             <span className="toggle-knob" />
           </button>
@@ -238,6 +253,13 @@ export default function SettingsPanel({ usernames, settings, onSave, onClose }) 
         .toggle-label {
           font-size: 11px;
           color: var(--text-secondary);
+        }
+
+        .toggle-sublabel {
+          display: block;
+          font-size: 9px;
+          color: var(--text-muted);
+          margin-top: 2px;
         }
 
         .toggle {
