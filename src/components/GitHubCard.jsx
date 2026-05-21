@@ -104,12 +104,18 @@ export default function GitHubCard({ data, loading, compact }) {
           transition: background var(--transition);
         }
 
-        .card:hover {
-          background: var(--bg-card-hover);
+        .card--github {
+          border: none;
+          background:
+            linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
+            linear-gradient(135deg, var(--accent-green), rgba(0,255,136,0.1), transparent 60%) border-box;
+          border: 1.5px solid transparent;
         }
 
-        .card--github {
-          border-top: 2px solid var(--accent-green);
+        .card--github:hover {
+          background:
+            linear-gradient(var(--bg-card-hover), var(--bg-card-hover)) padding-box,
+            linear-gradient(135deg, var(--accent-green), rgba(0,255,136,0.15), transparent 60%) border-box;
         }
 
         .card--error, .card--empty {

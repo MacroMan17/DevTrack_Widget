@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-// Difficulty bar — shows Easy/Medium/Hard breakdown visually
+// Difficulty breakdown with pill badges
 function DifficultyBar({ easy, medium, hard }) {
   const total = easy + medium + hard || 1;
   const easyPct   = (easy   / total) * 100;
@@ -11,11 +11,20 @@ function DifficultyBar({ easy, medium, hard }) {
 
   return (
     <div className="diff-container">
-      {/* Labels */}
-      <div className="diff-labels">
-        <span className="diff-label diff-label--easy">E: {easy}</span>
-        <span className="diff-label diff-label--medium">M: {medium}</span>
-        <span className="diff-label diff-label--hard">H: {hard}</span>
+      {/* Pill badges */}
+      <div className="diff-pills">
+        <span className="diff-pill diff-pill--easy">
+          <span className="diff-pill-dot" />
+          Easy <strong>{easy}</strong>
+        </span>
+        <span className="diff-pill diff-pill--medium">
+          <span className="diff-pill-dot" />
+          Med <strong>{medium}</strong>
+        </span>
+        <span className="diff-pill diff-pill--hard">
+          <span className="diff-pill-dot" />
+          Hard <strong>{hard}</strong>
+        </span>
       </div>
       {/* Progress bar */}
       <div className="diff-bar">
@@ -133,7 +142,17 @@ export default function LeetCodeCard({ data, loading, compact }) {
 
       <style>{`
         .card--leetcode {
-          border-top: 2px solid var(--accent-orange);
+          border: none;
+          background:
+            linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
+            linear-gradient(135deg, var(--accent-orange), rgba(255,140,66,0.1), transparent 60%) border-box;
+          border: 1.5px solid transparent;
+        }
+
+        .card--leetcode:hover {
+          background:
+            linear-gradient(var(--bg-card-hover), var(--bg-card-hover)) padding-box,
+            linear-gradient(135deg, var(--accent-orange), rgba(255,140,66,0.15), transparent 60%) border-box;
         }
 
         .card-platform {
@@ -184,20 +203,56 @@ export default function LeetCodeCard({ data, loading, compact }) {
           margin-bottom: 12px;
         }
 
-        .diff-labels {
+        .diff-pills {
           display: flex;
-          gap: 8px;
-          margin-bottom: 4px;
+          gap: 6px;
+          margin-bottom: 8px;
         }
 
-        .diff-label {
+        .diff-pill {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          padding: 3px 8px;
+          border-radius: 20px;
           font-size: 10px;
-          font-weight: 600;
+          font-weight: 500;
+          letter-spacing: 0.02em;
         }
 
-        .diff-label--easy   { color: #00b8a3; }
-        .diff-label--medium { color: var(--accent-orange); }
-        .diff-label--hard   { color: var(--accent-red); }
+        .diff-pill strong {
+          font-weight: 700;
+          font-family: var(--font-display);
+          font-size: 11px;
+        }
+
+        .diff-pill-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+
+        .diff-pill--easy {
+          background: rgba(0, 184, 163, 0.12);
+          color: #00b8a3;
+          border: 1px solid rgba(0, 184, 163, 0.25);
+        }
+        .diff-pill--easy .diff-pill-dot { background: #00b8a3; }
+
+        .diff-pill--medium {
+          background: rgba(255, 192, 30, 0.12);
+          color: #ffc01e;
+          border: 1px solid rgba(255, 192, 30, 0.25);
+        }
+        .diff-pill--medium .diff-pill-dot { background: #ffc01e; }
+
+        .diff-pill--hard {
+          background: rgba(255, 77, 109, 0.12);
+          color: var(--accent-red);
+          border: 1px solid rgba(255, 77, 109, 0.25);
+        }
+        .diff-pill--hard .diff-pill-dot { background: var(--accent-red); }
 
         .diff-bar {
           display: flex;

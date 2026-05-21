@@ -88,6 +88,25 @@ function calcStreak(submissionCalendar) {
   }
 }
 
+// Check if user solved a problem today from submissionCalendar
+function calcSolvedToday(submissionCalendar) {
+  if (!submissionCalendar) return false;
+  try {
+    const calendar = typeof submissionCalendar === 'string'
+      ? JSON.parse(submissionCalendar)
+      : submissionCalendar;
+
+    const todayKey = new Date().toISOString().split('T')[0];
+
+    return Object.entries(calendar).some(([ts, count]) => {
+      const dateKey = new Date(parseInt(ts) * 1000).toISOString().split('T')[0];
+      return dateKey === todayKey && count > 0;
+    });
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchLeetCodeData(username) {
   if (!username) throw new Error('No username provided');
 
@@ -126,7 +145,7 @@ export async function fetchLeetCodeData(username) {
       medium: data.mediumSolved || 0,
       hard: data.hardSolved || 0,
       streak: data.streak || calcStreak(data.submissionCalendar),
-      solvedToday: false,
+      solvedToday: calcSolvedToday(data.submissionCalendar),
       profileUrl: `https://leetcode.com/${username}`,
     };
   } catch (error) {
@@ -173,7 +192,7 @@ async function fetchLeetCodeDataAlternative(username) {
       medium: data.mediumSolved || 0,
       hard: data.hardSolved || 0,
       streak: data.streak || calcStreak(data.submissionCalendar),
-      solvedToday: false,
+      solvedToday: calcSolvedToday(data.submissionCalendar),
       profileUrl: `https://leetcode.com/${username}`,
     };
   } catch (error) {

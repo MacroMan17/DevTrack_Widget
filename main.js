@@ -18,10 +18,10 @@ function createWindow() {
   const { width: screenW, height: screenH } = screen.getPrimaryDisplay().workAreaSize;
 
   mainWindow = new BrowserWindow({
-    width: 320,
-    height: 520,
-    x: screenW - 340,
-    y: screenH - 540,
+    width: 400,
+    height: screenH,
+    x: screenW - 420,
+    y: 0,
     
     // Production widget settings
     frame: false,
@@ -158,7 +158,7 @@ ipcMain.handle('save-settings', (event, settings) => {
 });
 
 ipcMain.handle('minimize-to-tray', () => {
-  mainWindow.hide();
+  mainWindow.minimize();
 });
 
 ipcMain.handle('quit-app', () => {
