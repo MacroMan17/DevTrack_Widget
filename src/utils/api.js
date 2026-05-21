@@ -1,48 +1,229 @@
 // src/utils/api.js — Data fetching for GitHub and LeetCode
 
 // ── GitHub API ────────────────────────────────────────────────────────────────
-// Uses the official GitHub REST API (no auth needed for public data, 60 req/hr)
+// Uses GitHub GraphQL API for rich contribution data
+
+// Helper: Convert date to YYYY-MM-DD format
+function toDateString(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// Helper: Build daily data from contribution collection
+function buildDailyCommitData(contributionCollection, days) {
+  const result = [];
+  const today = new Date();
+  
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const dateStr = toDateString(d);
+    
+    // Find contribution for this date
+    const contribution = contributionCollection.find(c => c.date === dateStr);
+    result.push({
+      date: dateStr,
+      count: contribution?.contributionCount || 0,
+    });
+  }
+  
+  return result;
+}
+
+// Helper: Calculate streak from daily data
+function calcCommitStreak(dailyData) {
+  let streak = 0, current = 0;
+  for (const { count } of dailyData) {
+    if (count > 0) { current++; streak = Math.max(streak, current); }
+    else current = 0;
+  }
+  return streak;
+}
+
+// Helper: Calculate current streak (backwards from today)
+function calcCurrentCommitStreak(dailyData) {
+  let current = 0;
+  for (let i = dailyData.length - 1; i >= 0; i--) {
+    if (dailyData[i].count > 0) {
+      current++;
+    } else if (i < dailyData.length - 1) {
+      break;
+    }
+  }
+  return current;
+}
 
 export async function fetchGitHubData(username) {
   if (!username) throw new Error('No username provided');
 
-  // Fetch user profile
-  const userRes = await fetch(`https://api.github.com/users/${username}`);
-  if (!userRes.ok) {
-    if (userRes.status === 404) throw new Error(`GitHub user "${username}" not found`);
-    if (userRes.status === 403) throw new Error('GitHub API rate limit reached. Try again later.');
-    throw new Error(`GitHub API error: ${userRes.status}`);
+  try {
+    // Fetch user profile via REST API
+    const userRes = await fetch(`https://api.github.com/users/${username}`);
+    if (!userRes.ok) {
+      if (userRes.status === 404) throw new Error(`GitHub user "${username}" not found`);
+      if (userRes.status === 403) throw new Error('GitHub API rate limit reached. Try again later.');
+      throw new Error(`GitHub API error: ${userRes.status}`);
+    }
+    const user = await userRes.json();
+
+    // Fetch recent events (to count commits in the last 30 days and check today)
+    let events = [];
+    
+    // Try public events first
+    const publicEventsRes = await fetch(
+      `https://api.github.com/users/${username}/events/public?per_page=300`
+    );
+    if (publicEventsRes.ok) {
+      events = await publicEventsRes.json();
+    }
+
+    console.log(`[GitHub] Fetched ${events.length} public events for ${username}`);
+
+    // Count push events (commits) in the last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    let recentCommits = events
+      .filter((e) => e.type === 'PushEvent' && new Date(e.created_at) > thirtyDaysAgo)
+      .reduce((sum, e) => sum + (e.payload?.commits?.length || 0), 0);
+
+    // Check if there was a commit today
+    const today = new Date().toDateString();
+    let commitedToday = events.some(
+      (e) => e.type === 'PushEvent' && new Date(e.created_at).toDateString() === today
+    );
+
+    console.log(`[GitHub] Recent commits (30d): ${recentCommits}, Committed today: ${commitedToday}`);
+
+    // Always try to fetch from repositories to build daily data
+    let dailyMapFromRepos = {};
+    try {
+      const reposRes = await fetch(`https://api.github.com/users/${username}/repos?per_page=100&sort=updated&type=all`);
+      if (reposRes.ok) {
+        const repos = await reposRes.json();
+        console.log(`[GitHub] Found ${repos.length} repositories`);
+        
+        // Try to get commit data from each repo
+        for (const repo of repos.slice(0, 15)) {
+          try {
+            const commitsRes = await fetch(
+              `https://api.github.com/repos/${username}/${repo.name}/commits?since=${thirtyDaysAgo.toISOString()}&per_page=100`
+            );
+            if (commitsRes.ok) {
+              const commits = await commitsRes.json();
+              console.log(`[GitHub] ${repo.name}: ${commits.length} commits`);
+              
+              // Add to recent commits count if we didn't get it from events
+              if (recentCommits === 0) {
+                recentCommits += commits.length;
+              }
+              
+              // Build daily map from commits
+              commits.forEach(c => {
+                const commitDate = new Date(c.commit.author.date);
+                const dateStr = toDateString(commitDate);
+                dailyMapFromRepos[dateStr] = (dailyMapFromRepos[dateStr] || 0) + 1;
+              });
+              
+              // Check if any commit is from today
+              if (!commitedToday) {
+                commitedToday = commits.some(c => 
+                  new Date(c.commit.author.date).toDateString() === today
+                );
+              }
+            }
+          } catch (e) {
+            console.warn(`[GitHub] Could not fetch commits from ${repo.name}:`, e.message);
+          }
+        }
+        console.log(`[GitHub] Total commits after repo check: ${recentCommits}`);
+        console.log(`[GitHub] Daily map from repos:`, dailyMapFromRepos);
+      }
+    } catch (e) {
+      console.warn('[GitHub] Could not fetch from repositories:', e.message);
+    }
+
+    // Try to fetch contribution data from GitHub GraphQL (public data, no auth needed)
+    let dailyData30 = [];
+    let dailyData90 = [];
+    let topLanguage = null;
+    let currentStreak = 0;
+    let longestStreak = 0;
+
+    try {
+      // Fetch contribution calendar data using a public endpoint
+      const contribRes = await fetch(`https://api.github.com/users/${username}/repos?per_page=100&sort=updated&type=all`);
+      if (contribRes.ok) {
+        const repos = await contribRes.json();
+        
+        // Merge daily data from events and repos
+        const dailyMap = { ...dailyMapFromRepos };
+        
+        // Also add from events if available
+        events.forEach(e => {
+          if (e.type === 'PushEvent') {
+            const dateStr = toDateString(new Date(e.created_at));
+            const commitCount = e.payload?.commits?.length || 0;
+            dailyMap[dateStr] = (dailyMap[dateStr] || 0) + commitCount;
+          }
+        });
+
+        console.log(`[GitHub] Final daily map:`, dailyMap);
+
+        // Build 30d and 90d arrays
+        const today = new Date();
+        for (let i = 29; i >= 0; i--) {
+          const d = new Date(today);
+          d.setDate(today.getDate() - i);
+          const dateStr = toDateString(d);
+          dailyData30.push({ date: dateStr, count: dailyMap[dateStr] || 0 });
+        }
+
+        for (let i = 89; i >= 0; i--) {
+          const d = new Date(today);
+          d.setDate(today.getDate() - i);
+          const dateStr = toDateString(d);
+          dailyData90.push({ date: dateStr, count: dailyMap[dateStr] || 0 });
+        }
+
+        currentStreak = calcCurrentCommitStreak(dailyData30);
+        longestStreak = calcCommitStreak(dailyData90);
+
+        console.log(`[GitHub] Current streak: ${currentStreak}, Longest streak: ${longestStreak}`);
+        console.log(`[GitHub] Daily data 30d (last 7):`, dailyData30.slice(-7));
+
+        // Extract top language from repos
+        const langMap = {};
+        repos.forEach(repo => {
+          if (repo.language) {
+            langMap[repo.language] = (langMap[repo.language] || 0) + 1;
+          }
+        });
+        topLanguage = Object.entries(langMap).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+      }
+    } catch (e) {
+      console.warn('[GitHub] Could not fetch contribution data:', e.message);
+    }
+
+    return {
+      username: user.login,
+      avatarUrl: user.avatar_url,
+      publicRepos: user.public_repos,
+      followers: user.followers,
+      recentCommits,
+      commitedToday,
+      dailyData30,
+      dailyData90,
+      currentStreak,
+      longestStreak,
+      topLanguage,
+    };
+  } catch (error) {
+    console.error('[GitHub] Fetch failed:', error.message);
+    throw error;
   }
-  const user = await userRes.json();
-
-  // Fetch recent events (to count commits in the last 30 days)
-  const eventsRes = await fetch(
-    `https://api.github.com/users/${username}/events/public?per_page=100`
-  );
-  const events = eventsRes.ok ? await eventsRes.json() : [];
-
-  // Count push events (commits) in the last 30 days
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-  const recentCommits = events
-    .filter((e) => e.type === 'PushEvent' && new Date(e.created_at) > thirtyDaysAgo)
-    .reduce((sum, e) => sum + (e.payload?.commits?.length || 0), 0);
-
-  // Check if there was a commit today
-  const today = new Date().toDateString();
-  const commitedToday = events.some(
-    (e) => e.type === 'PushEvent' && new Date(e.created_at).toDateString() === today
-  );
-
-  return {
-    username: user.login,
-    avatarUrl: user.avatar_url,
-    publicRepos: user.public_repos,
-    followers: user.followers,
-    recentCommits,
-    commitedToday,
-  };
 }
 
 // ── LeetCode API ──────────────────────────────────────────────────────────────
@@ -50,6 +231,14 @@ export async function fetchGitHubData(username) {
 
 // Calculate streak from submissionCalendar JSON string
 // submissionCalendar = '{ "unix_timestamp": count, ... }'
+function toLocalDateKey(ts) {
+  const d = new Date(parseInt(ts) * 1000);
+  const year  = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day   = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function calcStreak(submissionCalendar) {
   if (!submissionCalendar) return 0;
   try {
@@ -57,28 +246,26 @@ function calcStreak(submissionCalendar) {
       ? JSON.parse(submissionCalendar)
       : submissionCalendar;
 
-    // Build a Set of date strings 'YYYY-MM-DD' that have at least 1 submission
+    // Build a Set of local date strings that have at least 1 submission
     const activeDates = new Set(
       Object.entries(calendar)
         .filter(([, count]) => count > 0)
-        .map(([ts]) => new Date(parseInt(ts) * 1000).toISOString().split('T')[0])
+        .map(([ts]) => toLocalDateKey(ts))
     );
 
     // Walk backwards from today counting consecutive active days
     let streak = 0;
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
     for (let i = 0; i < 365; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
-      const key = d.toISOString().split('T')[0];
+      const key = toLocalDateKey(d.getTime() / 1000);
 
       if (activeDates.has(key)) {
         streak++;
       } else {
-        // Allow missing today (streak may still be alive from yesterday)
-        if (i === 0) continue;
+        if (i === 0) continue; // allow missing today
         break;
       }
     }
@@ -96,12 +283,11 @@ function calcSolvedToday(submissionCalendar) {
       ? JSON.parse(submissionCalendar)
       : submissionCalendar;
 
-    const todayKey = new Date().toISOString().split('T')[0];
+    const todayKey = toLocalDateKey(Date.now() / 1000);
 
-    return Object.entries(calendar).some(([ts, count]) => {
-      const dateKey = new Date(parseInt(ts) * 1000).toISOString().split('T')[0];
-      return dateKey === todayKey && count > 0;
-    });
+    return Object.entries(calendar).some(([ts, count]) =>
+      toLocalDateKey(ts) === todayKey && count > 0
+    );
   } catch {
     return false;
   }
@@ -146,6 +332,7 @@ export async function fetchLeetCodeData(username) {
       hard: data.hardSolved || 0,
       streak: data.streak || calcStreak(data.submissionCalendar),
       solvedToday: calcSolvedToday(data.submissionCalendar),
+      submissionCalendar: data.submissionCalendar || null,
       profileUrl: `https://leetcode.com/${username}`,
     };
   } catch (error) {
@@ -193,6 +380,7 @@ async function fetchLeetCodeDataAlternative(username) {
       hard: data.hardSolved || 0,
       streak: data.streak || calcStreak(data.submissionCalendar),
       solvedToday: calcSolvedToday(data.submissionCalendar),
+      submissionCalendar: data.submissionCalendar || null,
       profileUrl: `https://leetcode.com/${username}`,
     };
   } catch (error) {
