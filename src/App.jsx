@@ -5,6 +5,7 @@ import TitleBar      from './components/TitleBar';
 import GitHubCard    from './components/GitHubCard';
 import LeetCodeCard  from './components/LeetCodeCard';
 import SettingsPanel from './components/SettingsPanel';
+import ErrorBoundary from './components/ErrorBoundary';
 import { fetchAllData } from './utils/api';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -142,7 +143,8 @@ export default function App() {
   const hasUsernames = usernames.github || usernames.leetcode;
 
   return (
-    <div className="app">
+    <ErrorBoundary>
+      <div className="app">
       {/* Title bar always visible */}
       <TitleBar
         onSettingsClick={() => setView(view === 'settings' ? 'widget' : 'settings')}
@@ -350,5 +352,6 @@ export default function App() {
         }
       `}</style>
     </div>
+    </ErrorBoundary>
   );
 }
