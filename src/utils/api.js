@@ -1,5 +1,7 @@
 // src/utils/api.js — Data fetching for GitHub and LeetCode
 
+import { apiCache } from './cache';
+
 // ── Timeout Configuration ──────────────────────────────────────────────────────
 const FETCH_TIMEOUT = 10000; // 10 seconds
 
@@ -81,6 +83,15 @@ function calcCurrentCommitStreak(dailyData) {
 
 export async function fetchGitHubData(username) {
   if (!username) throw new Error('No username provided');
+
+  const cacheKey = `github_${username}`;
+  
+  // Check cache first
+  const cached = apiCache.get(cacheKey);
+  if (cached) {
+    console.log('[GitHub] Using cached data');
+    return cached;
+  }
 
   try {
     // Fetch user profile via REST API
@@ -250,6 +261,23 @@ export async function fetchGitHubData(username) {
   }
 }
 
+// Cache the result before returning
+    const result = {
+      username: user.login,
+      avatarUrl: user.avatar_url,
+      publicRepos: user.public_repos,
+      followers: user.followers,
+      recentCommits,
+      commitedToday,
+      dailyData30,
+      dailyData90,
+      currentStreak,
+      longestStreak,
+      topLanguage,
+    };
+    apiCache.set(cacheKey, result);
+    return result;
+
 // ── LeetCode API ──────────────────────────────────────────────────────────────
 // Using a public LeetCode API wrapper that handles CORS and authentication
 
@@ -320,6 +348,15 @@ function calcSolvedToday(submissionCalendar) {
 export async function fetchLeetCodeData(username) {
   if (!username) throw new Error('No username provided');
 
+  const cacheKey = `leetcode_${username}`;
+  
+  // Check cache first
+  const cached = apiCache.get(cacheKey);
+  if (cached) {
+    console.log('[LeetCode] Using cached data');
+    return cached;
+  }
+
   try {
     console.log(`[LeetCode] Fetching data for: ${username}`);
     
@@ -372,6 +409,23 @@ export async function fetchLeetCodeData(username) {
     }
   }
 }
+
+// Cache the result before returning
+    const result = {
+      username: data.username || username,
+      avatarUrl: data.avatar,
+      ranking: data.ranking,
+      total: data.totalSolved || 0,
+      easy: data.easySolved || 0,
+      medium: data.mediumSolved || 0,
+      hard: data.hardSolved || 0,
+      streak: data.streak || calcStreak(data.submissionCalendar),
+      solvedToday: calcSolvedToday(data.submissionCalendar),
+      submissionCalendar: data.submissionCalendar || null,
+      profileUrl: `https://leetcode.com/${username}`,
+    };
+    apiCache.set(cacheKey, result);
+    return result;
 
 // Alternative API using different endpoint
 async function fetchLeetCodeDataAlternative(username) {
