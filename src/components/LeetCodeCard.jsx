@@ -221,10 +221,26 @@ export default function LeetCodeCard({ data, loading, compact }) {
   }
 
   if (data?.error) {
+    const errorMsg = data.error;
+    let friendlyMsg = 'Unable to load LeetCode data';
+    let details = 'Try again later or check your username';
+
+    if (errorMsg.includes('timeout')) {
+      friendlyMsg = 'Request Timeout';
+      details = 'LeetCode API took too long. Check your internet connection.';
+    } else if (errorMsg.includes('404') || errorMsg.includes('not found')) {
+      friendlyMsg = 'User Not Found';
+      details = 'Check your LeetCode username and try again.';
+    } else if (errorMsg.includes('network')) {
+      friendlyMsg = 'Network Error';
+      details = 'Check your internet connection.';
+    }
+
     return (
       <div className="card card--leetcode card--error">
         <div className="card-icon" style={{ color: 'var(--accent-orange)' }}>⚠</div>
-        <p className="error-msg">LeetCode: {data.error}</p>
+        <p className="error-msg">{friendlyMsg}</p>
+        <p className="error-details">{details}</p>
       </div>
     );
   }
@@ -308,6 +324,18 @@ export default function LeetCodeCard({ data, loading, compact }) {
           background:
             linear-gradient(var(--bg-card-hover), var(--bg-card-hover)) padding-box,
             linear-gradient(135deg, var(--accent-orange), rgba(255,140,66,0.15), transparent 60%) border-box;
+        }
+
+        .error-msg, .empty-msg {
+          color: var(--text-secondary);
+          font-size: 11px;
+        }
+
+        .error-details {
+          color: var(--text-muted);
+          font-size: 9px;
+          margin-top: 4px;
+          line-height: 1.4;
         }
 
         .card-platform {

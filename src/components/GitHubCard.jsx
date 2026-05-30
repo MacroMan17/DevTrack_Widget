@@ -195,10 +195,29 @@ export default function GitHubCard({ data, loading, compact }) {
   }
 
   if (data?.error) {
+    const errorMsg = data.error;
+    let friendlyMsg = 'Unable to load GitHub data';
+    let details = 'Try again later or check your username';
+
+    if (errorMsg.includes('timeout')) {
+      friendlyMsg = 'Request Timeout';
+      details = 'GitHub API took too long. Check your internet connection.';
+    } else if (errorMsg.includes('404') || errorMsg.includes('not found')) {
+      friendlyMsg = 'User Not Found';
+      details = 'Check your GitHub username and try again.';
+    } else if (errorMsg.includes('rate limit')) {
+      friendlyMsg = 'Rate Limited';
+      details = 'GitHub API limit reached. Try again in a few minutes.';
+    } else if (errorMsg.includes('network')) {
+      friendlyMsg = 'Network Error';
+      details = 'Check your internet connection.';
+    }
+
     return (
       <div className="card card--github card--error">
         <div className="card-icon">⚠</div>
-        <p className="error-msg">GitHub: {data.error}</p>
+        <p className="error-msg">{friendlyMsg}</p>
+        <p className="error-details">{details}</p>
       </div>
     );
   }
@@ -339,6 +358,13 @@ export default function GitHubCard({ data, loading, compact }) {
         .error-msg, .empty-msg {
           color: var(--text-secondary);
           font-size: 11px;
+        }
+
+        .error-details {
+          color: var(--text-muted);
+          font-size: 9px;
+          margin-top: 4px;
+          line-height: 1.4;
         }
 
         .card-header {
