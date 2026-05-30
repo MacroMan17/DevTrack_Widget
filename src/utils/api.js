@@ -1,5 +1,29 @@
 // src/utils/api.js — Data fetching for GitHub and LeetCode
 
+// ── Timeout Configuration ──────────────────────────────────────────────────────
+const FETCH_TIMEOUT = 10000; // 10 seconds
+
+// Helper: Fetch with timeout protection
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    return response;
+  } catch (error) {
+    clearTimeout(timeout);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout - API took too long to respond');
+    }
+    throw error;
+  }
+}
+
 // ── GitHub API ────────────────────────────────────────────────────────────────
 // Uses GitHub GraphQL API for rich contribution data
 
@@ -60,7 +84,7 @@ export async function fetchGitHubData(username) {
 
   try {
     // Fetch user profile via REST API
-    const userRes = await fetch(`https://api.github.com/users/${username}`);
+    const userRes = await fetchWithTimeout(`https://api.github.com/users/${username}`);
     if (!userRes.ok) {
       if (userRes.status === 404) throw new Error(`GitHub user "${username}" not found`);
       if (userRes.status === 403) throw new Error('GitHub API rate limit reached. Try again later.');
@@ -72,7 +96,7 @@ export async function fetchGitHubData(username) {
     let events = [];
     
     // Try public events first
-    const publicEventsRes = await fetch(
+    const publicEventsRes = await fetchWithTimeout(
       `https://api.github.com/users/${username}/events/public?per_page=300`
     );
     if (publicEventsRes.ok) {
@@ -100,7 +124,7 @@ export async function fetchGitHubData(username) {
     // Always try to fetch from repositories to build daily data
     let dailyMapFromRepos = {};
     try {
-      const reposRes = await fetch(`https://api.github.com/users/${username}/repos?per_page=100&sort=updated&type=all`);
+      const reposRes = await fetchWithTimeout(`https://api.github.com/users/${username}/repos?per_page=100&sort=updated&type=all`);
       if (reposRes.ok) {
         const repos = await reposRes.json();
         console.log(`[GitHub] Found ${repos.length} repositories`);
@@ -108,7 +132,7 @@ export async function fetchGitHubData(username) {
         // Try to get commit data from each repo
         for (const repo of repos.slice(0, 15)) {
           try {
-            const commitsRes = await fetch(
+            const commitsRes = await fetchWithTimeout(
               `https://api.github.com/repos/${username}/${repo.name}/commits?since=${thirtyDaysAgo.toISOString()}&per_page=100`
             );
             if (commitsRes.ok) {
@@ -300,7 +324,7 @@ export async function fetchLeetCodeData(username) {
     console.log(`[LeetCode] Fetching data for: ${username}`);
     
     // Try the most reliable public API first
-    const res = await fetch(`https://leetcode-api.vercel.app/${username}`, {
+    const res = await fetchWithTimeout(`https://leetcode-api.vercel.app/${username}`, {
       method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -356,7 +380,7 @@ async function fetchLeetCodeDataAlternative(username) {
   try {
     console.log(`[LeetCode] Trying alternative endpoint for: ${username}`);
     
-    const res = await fetch(`https://alfa-leetcode-api.onrender.com/userProfile/${username}`, {
+    const res = await fetchWithTimeout(`https://alfa-leetcode-api.onrender.com/userProfile/${username}`, {
       method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
