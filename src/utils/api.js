@@ -242,26 +242,6 @@ export async function fetchGitHubData(username) {
       console.warn('[GitHub] Could not fetch contribution data:', e.message);
     }
 
-    return {
-      username: user.login,
-      avatarUrl: user.avatar_url,
-      publicRepos: user.public_repos,
-      followers: user.followers,
-      recentCommits,
-      commitedToday,
-      dailyData30,
-      dailyData90,
-      currentStreak,
-      longestStreak,
-      topLanguage,
-    };
-  } catch (error) {
-    console.error('[GitHub] Fetch failed:', error.message);
-    throw error;
-  }
-}
-
-// Cache the result before returning
     const result = {
       username: user.login,
       avatarUrl: user.avatar_url,
@@ -277,6 +257,11 @@ export async function fetchGitHubData(username) {
     };
     apiCache.set(cacheKey, result);
     return result;
+  } catch (error) {
+    console.error('[GitHub] Fetch failed:', error.message);
+    throw error;
+  }
+}
 
 // ── LeetCode API ──────────────────────────────────────────────────────────────
 // Using a public LeetCode API wrapper that handles CORS and authentication
@@ -383,34 +368,6 @@ export async function fetchLeetCodeData(username) {
       throw new Error(data.message || 'User not found');
     }
 
-    return {
-      username: data.username || username,
-      avatarUrl: data.avatar,
-      ranking: data.ranking,
-      total: data.totalSolved || 0,
-      easy: data.easySolved || 0,
-      medium: data.mediumSolved || 0,
-      hard: data.hardSolved || 0,
-      streak: data.streak || calcStreak(data.submissionCalendar),
-      solvedToday: calcSolvedToday(data.submissionCalendar),
-      submissionCalendar: data.submissionCalendar || null,
-      profileUrl: `https://leetcode.com/${username}`,
-    };
-  } catch (error) {
-    console.error(`[LeetCode] Fetch failed:`, error.message);
-    
-    // Try alternative API
-    try {
-      console.log(`[LeetCode] Trying alternative API...`);
-      return await fetchLeetCodeDataAlternative(username);
-    } catch (altError) {
-      console.error(`[LeetCode] Alternative API also failed:`, altError.message);
-      throw new Error(`Unable to fetch LeetCode profile: ${error.message}`);
-    }
-  }
-}
-
-// Cache the result before returning
     const result = {
       username: data.username || username,
       avatarUrl: data.avatar,
@@ -426,6 +383,19 @@ export async function fetchLeetCodeData(username) {
     };
     apiCache.set(cacheKey, result);
     return result;
+  } catch (error) {
+    console.error(`[LeetCode] Fetch failed:`, error.message);
+    
+    // Try alternative API
+    try {
+      console.log(`[LeetCode] Trying alternative API...`);
+      return await fetchLeetCodeDataAlternative(username);
+    } catch (altError) {
+      console.error(`[LeetCode] Alternative API also failed:`, altError.message);
+      throw new Error(`Unable to fetch LeetCode profile: ${error.message}`);
+    }
+  }
+}
 
 // Alternative API using different endpoint
 async function fetchLeetCodeDataAlternative(username) {
