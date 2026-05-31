@@ -1,7 +1,7 @@
 {
   "name": "devtrack-widget",
-  "version": "1.0.0",
-  "description": "A floating desktop widget to track GitHub and LeetCode progress",
+  "version": "1.0.1",
+  "description": "A floating desktop widget to track GitHub and LeetCode progress - Production Ready",
   "main": "main.js",
   "homepage": "./",
   "scripts": {
