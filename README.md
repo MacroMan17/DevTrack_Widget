@@ -260,7 +260,7 @@ Found a bug? Have a feature idea?
 
 <div align="center">
 
-**Made with ❤️ by [Sumit Pathak](https://github.com/MacroMan17)**
+**Made with ❤️ by [Sumit Sinha](https://github.com/MacroMan17)**
 
 [⬆ Back to top](#-devtrack-widget)
 
